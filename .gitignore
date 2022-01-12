@@ -1,0 +1,15 @@
+# Eclipse
+.classpath
+.project
+.settings
+
+# Maven
+target
+dependency-reduced-pom.xml
+
+# Personal
+trash
+data
+
+# Emacs
+*~
