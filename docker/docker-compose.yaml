@@ -1,0 +1,17 @@
+#
+# Usage:
+# 
+# docker-compose run --rm --service-ports neodigest2service
+#
+version: '3.9'
+services:
+  neodigest2service:
+    image: docker.io/schastel/neodigest2service:0.0.1
+    ports:
+      # host:container
+      - "9290:9290"
+    volumes:
+      # host path:container path
+      - /data/shared/digest2/current:/data/shared/digest2/current:ro
+    # command:
+      # TODO: write with different port, etc
