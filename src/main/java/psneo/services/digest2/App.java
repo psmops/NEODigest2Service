@@ -7,10 +7,12 @@ import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
+import picocli.CommandLine.ParseResult;
 import psneo.exceptions.NeoInitializationException;
 import psneo.logging.NeoLogging;
 import psneo.services.digest2.threads.HttpServer;
@@ -19,7 +21,9 @@ import psneo.services.digest2.threads.HttpServer;
  * Because digest2 single measurement of the score is somewhat unreliable
  *
  */
-@Command(name = App.COMMAND_NAME)
+@Command(name = App.COMMAND_NAME,
+		mixinStandardHelpOptions = true,
+		description = "Digest2 service")
 public class App {
 	/** Logging */
 	private final static Logger logger = LoggerFactory.getLogger(App.class);
@@ -45,7 +49,7 @@ public class App {
 			description = "Number of digest2 instances to run concurrently",
 			defaultValue = "5" )
 	int instancesCount;
-	
+
 	@Option(names = { "-digest2executable", "-e"}, 
 			description = "Path to the digest2 executable",
 			defaultValue = "/digest2/digest2")
@@ -55,11 +59,16 @@ public class App {
 	}
 
 	HttpServer httpServer;
-	
+
 	static App initialize(String[] args) throws NeoInitializationException {
 		App app = new App();
 		CommandLine commandLine = new CommandLine(app);
-		commandLine.parseArgs(args);
+		ParseResult parseResult = commandLine.parseArgs(args);
+		if (parseResult.isUsageHelpRequested()) {
+			CommandLine.usage(new App(), System.out);
+			return null;
+		}
+		NeoLogging.log2file("/dev/stdout", app.debug ? Level.DEBUG : Level.INFO);
 		return app;
 	}
 
@@ -71,12 +80,14 @@ public class App {
 		executorService.shutdown();
 		executorService.awaitTermination(10, TimeUnit.MINUTES); //FIXME
 	}
-	
+
 	public static void main(String[] args) throws Exception {
 		//NeoLogging.initializeDebug();
 		NeoLogging.silence();
 		App app = initialize(args);
-		app.run();
+		if (app != null) {
+			app.run();
+		}
 		logger.info("Terminating");
 	}
 }
