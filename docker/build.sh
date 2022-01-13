@@ -11,6 +11,6 @@ popd
 
 cp ../target/NEODigest2Service.jar tmp
 
-docker build --tag=docker.io/schastel/neodigest2service:0.0.1 .
+docker build --tag=nmops36:9281/neodigest2service:0.0.1 .
 
 rm -rf ./tmp
