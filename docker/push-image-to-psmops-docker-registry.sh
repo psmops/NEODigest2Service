@@ -8,6 +8,15 @@ if [ "`hostname`" != "flies" ]; then
 fi
 echo "OK: Running on flies"
 
+VERSION=`xpath -q -e "/project/version/text()" ../pom.xml`
+if [ "$VERSION" == "" ]; then
+    echo
+    echo "ERROR: $0 <VERSION>"
+    echo
+    exit 1
+fi
+echo "OK: Version [$VERSION]"
+
 sudo iptables -t nat -A OUTPUT -p tcp --dport 9281 -d 10.11.0.148 -j DNAT --to 127.0.0.1:9281
 
 # Test if tunnel is active
@@ -19,5 +28,5 @@ if ! nc -zw5 nmops36 9281; then
 fi
 echo "OK: Tunnel is active"
 
-docker push nmops36:9281/neodigest2service:0.0.1
+docker push nmops36:9281/neodigest2service:$VERSION
 
