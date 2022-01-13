@@ -1,6 +1,9 @@
 package psneo.services.digest2;
 
 import java.nio.file.Path;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -10,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
 
 import picocli.CommandLine;
+import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.ParseResult;
@@ -58,6 +62,22 @@ public class App {
 		return this.digest2Executable;
 	}
 
+	@ArgGroup(exclusive = true, multiplicity = "0..1", 
+			heading = "Termination time control%n")
+	Lifespan lifespan;
+	static class Lifespan {
+		static final String DEFAULT_STOP_AT = "17:00:00";
+		@Option(names = {"-stopAt", "-s"},
+				description = "Time when the server will stop. Default: " + DEFAULT_STOP_AT,
+				required = true)
+		LocalTime stopAt;
+		@Option(names = { "-lifespan", "-l"},
+				description = "Duration after which the server will stop",
+				required = true)
+		Duration lifespan;
+	}
+	Duration waitTimeBeforeTermination;
+	
 	HttpServer httpServer;
 
 	static App initialize(String[] args) throws NeoInitializationException {
@@ -69,6 +89,7 @@ public class App {
 			return null;
 		}
 		NeoLogging.log2file("/dev/stdout", app.debug ? Level.DEBUG : Level.INFO);
+		NeoLogging.silenceJetty();
 		return app;
 	}
 
@@ -78,7 +99,34 @@ public class App {
 		this.httpServer = new HttpServer(this.port, this.digest2Executable, this.instancesCount, this.digest2directory);
 		executorService.submit(this.httpServer);
 		executorService.shutdown();
-		executorService.awaitTermination(10, TimeUnit.MINUTES); //FIXME
+		initializeWaitTime();
+		logger.info("Will terminate in {} at {}", 
+				this.waitTimeBeforeTermination, LocalDateTime.now().plus(this.waitTimeBeforeTermination));
+		executorService.awaitTermination(this.waitTimeBeforeTermination.toSeconds(), TimeUnit.SECONDS);
+		this.httpServer.close();
+	}
+
+	private void initializeWaitTime() {
+		// Calculate waitTimeBeforeTermination after all instantiations
+		if (this.lifespan == null) {
+			logger.debug("lifespan is null");
+			this.lifespan = new Lifespan();
+			this.lifespan.stopAt = LocalTime.parse(Lifespan.DEFAULT_STOP_AT);
+		}
+		LocalDateTime terminateAt = null;
+		if (this.lifespan.stopAt == null) {
+			logger.debug("Using lifespan");
+			this.waitTimeBeforeTermination = this.lifespan.lifespan;
+			return;
+		} else {
+			logger.debug("Using stopAt");
+			terminateAt = LocalDateTime.now().with(this.lifespan.stopAt);
+		}
+		logger.debug("Should terminate at {} local time", terminateAt);
+		this.waitTimeBeforeTermination = Duration.between(LocalDateTime.now(), terminateAt);
+		if (this.waitTimeBeforeTermination.isNegative() || this.waitTimeBeforeTermination.isZero()) {
+			this.waitTimeBeforeTermination .plusHours(24);
+		}
 	}
 
 	public static void main(String[] args) throws Exception {

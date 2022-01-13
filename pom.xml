@@ -7,7 +7,7 @@
 
 	<groupId>psneo</groupId>
 	<artifactId>services.digest2</artifactId>
-	<version>0.0.1</version>
+	<version>0.0.2</version>
 	<packaging>jar</packaging>
 
 	<name>services.digest2</name>

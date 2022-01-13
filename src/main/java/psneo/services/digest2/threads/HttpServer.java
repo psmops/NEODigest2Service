@@ -20,7 +20,7 @@ public class HttpServer implements Callable<Void> {
 
 	Server server;
 	volatile boolean terminated;
-	public void terminate() {
+	public void close() {
 		this.terminated = true;
 	}
 	
